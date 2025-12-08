@@ -4,9 +4,10 @@ import * as Styles from './styles'
 import { SeasonSaleProps } from './types'
 
 export function SeasonSale (props: SeasonSaleProps) {
-  const { 
-    data
-  } = props
+  const { data } = props
+
+  // Return null if no data
+  if (!data) return null
 
   return (
     <Container size="lg">
@@ -19,7 +20,7 @@ export function SeasonSale (props: SeasonSaleProps) {
           </Box>
         </Styles.Content>
         <Styles.Figure>
-          <Image src={data.image} alt={data.title}  fill/>
+          <Image src={data.image} alt={data.title} fill/>
         </Styles.Figure>
       </Styles.Container>
     </Container>

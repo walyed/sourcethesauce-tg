@@ -37,6 +37,9 @@ export function Arrivals (props: ArrivalsProps) {
     }
   })
 
+  // Return null if no data
+  if (!data || data.length === 0) return null
+
   const renderSlides = data.map((value, index) => (
     <div className="keen-slider__slide" key={index}>
       <ProductItem data={value}/>

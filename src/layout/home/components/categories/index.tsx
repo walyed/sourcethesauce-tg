@@ -8,6 +8,9 @@ export function Category (props: CategoryProps) {
     data
   } = props
 
+  // Return null if no data
+  if (!data || data.length === 0) return null
+
   const renderCategories = data.map((value, index) => (
     <Styles.CategoryItem key={index}>
       <Styles.Content>

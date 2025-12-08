@@ -56,7 +56,7 @@ export function Collections (props: CollectionsProps) {
       </Styles.Figure>
     </div>
   ))
-  , [])
+  , [data])
   
   const renderDots = useMemo(() => isLoading &&
     [...Array(((instanceRef?.current?.track.details.slides.length || 2) - 1 ) || 0)
@@ -69,6 +69,9 @@ export function Collections (props: CollectionsProps) {
         />
       ))
   , [currentSlide, instanceRef, isLoading])
+
+  // Return null if no data
+  if (!data || data.length === 0) return null
   
   return (
     <Container size="lg">

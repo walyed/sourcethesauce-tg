@@ -21,11 +21,13 @@ class MyDocument extends Document {
 
   render () {
     return (
-      <Html lang="pt-BR">
+      <Html lang="en">
         <Head>
           <style id="stitches" dangerouslySetInnerHTML={{ __html: getCssText() }} />
         </Head>
         <body>
+          {/* Telegram Web App SDK - must load before React */}
+          <script src="https://telegram.org/js/telegram-web-app.js" />
           <Main />
           <NextScript />
         </body>

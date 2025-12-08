@@ -1,27 +1,15 @@
-import { Head } from "@/components";
-import { HomeLayout } from "@/layout/home";
-import { HomePageProps } from "@/layout/home/types";
-import { homeService } from "@/services/home";
-import { GetServerSideProps, InferGetServerSidePropsType } from "next";
+import { GetServerSideProps } from "next";
 
-export const getServerSideProps: GetServerSideProps<HomePageProps> = async () => {
-  const { data } = await homeService.find(
-
-  )
+// Redirect root to Telegram mini app
+export const getServerSideProps: GetServerSideProps = async () => {
   return {
-    props: {
-      data
-    }
+    redirect: {
+      destination: '/tg',
+      permanent: false,
+    },
   }
 }
 
-export default function HomePage (props: InferGetServerSidePropsType<typeof getServerSideProps>) {
-
-  
-  return (
-    <>
-      <Head title="Floreza | Home" description="Home page" />
-      <HomeLayout {...props} />
-    </>
-  )
+export default function Home() {
+  return null
 }

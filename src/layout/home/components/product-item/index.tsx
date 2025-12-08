@@ -9,8 +9,8 @@ import { ProductItemProps } from './types'
 export function ProductItem (props: ProductItemProps) {
   const { 
     data: {
-      images: [image],
-      sizes,
+      images = [],
+      sizes = [],
       name,
       price,
       promotion,
@@ -20,6 +20,8 @@ export function ProductItem (props: ProductItemProps) {
       is_sold_out
     } 
   } = props
+
+  const image = images[0] || ''
 
   const renderDiscountTag = () => {
     if (!promotion?.value) return null
@@ -51,7 +53,7 @@ export function ProductItem (props: ProductItemProps) {
 
 
   const renderDiscount = () => {
-    if (!promotion.value) return null
+    if (!promotion?.value) return null
 
     const priceWithDiscount = (price * promotion.value)
     return (
@@ -63,7 +65,7 @@ export function ProductItem (props: ProductItemProps) {
   }
 
   const renderPrice = () => {
-    if (promotion.value) return null
+    if (promotion?.value) return null
 
     return (
       <Typography size="md" fontWeight="500" color="heading">{toLocaleString(price)}</Typography>
@@ -82,10 +84,10 @@ export function ProductItem (props: ProductItemProps) {
           {renderSoldOut()}
         </Styles.TagView>
         <Styles.Figure>
-          <Image src={image} alt="" fill />
+          {image && <Image src={image} alt="" fill />}
         </Styles.Figure>
         <Styles.Info>
-          <Typography size="xsm" color="text">{`${sizes.length} cores`}</Typography>
+          {sizes.length > 0 && <Typography size="xsm" color="text">{`${sizes.length} cores`}</Typography>}
           <Typography as="strong" fontWeight="400" color="heading" size="md">{name}</Typography>
           {renderPrice()}
           {renderDiscount()}

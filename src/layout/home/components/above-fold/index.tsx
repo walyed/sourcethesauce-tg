@@ -11,7 +11,7 @@ import { useState } from 'react'
 import { Box, Button, Container } from '@/components'
 
 export function AboveFold (props: AboveFoldProps) {
-  const { data } = props
+  const { data = [] } = props
 
   const [currentSlide, setCurrentSlide] = useState(0)
 
@@ -55,15 +55,6 @@ export function AboveFold (props: AboveFoldProps) {
     ]
   );
 
-  const renderDots = data
-    .map((_, index) => (
-      <Styles.Dot 
-        key={index} 
-        active={index === currentSlide} 
-        onClick={() => instanceRef.current?.moveToIdx(index)}
-      />
-    ))
-
   const renderSlides = useMemo(() => data.map((value, index) => (
     <div className="keen-slider__slide" key={index}>
       <Container size="md">
@@ -84,9 +75,18 @@ export function AboveFold (props: AboveFoldProps) {
         />
       </Styles.Figure>
     </div>
-  )), [])
-  
-  if (!data) return null
+  )), [data])
+
+  const renderDots = useMemo(() => data.map((_, index) => (
+    <Styles.Dot 
+      key={index} 
+      active={index === currentSlide} 
+      onClick={() => instanceRef.current?.moveToIdx(index)}
+    />
+  )), [data, currentSlide, instanceRef])
+
+  // Early return if no data - after all hooks
+  if (!data || data.length === 0) return null
 
   return (
     <Styles.Container>
