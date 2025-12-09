@@ -36,11 +36,6 @@ const NavLink = styled(Link, {
   color: '#ffffff',
   textDecoration: 'none',
   opacity: 0.8,
-  transition: 'opacity 0.2s',
-  
-  '&:hover': {
-    opacity: 1,
-  }
 })
 
 const Main = styled('main', {
@@ -104,38 +99,13 @@ const Td = styled('td', {
   verticalAlign: 'middle',
 })
 
-const ProductImage = styled('div', {
+const CategoryImage = styled('div', {
   position: 'relative',
   width: 48,
   height: 48,
   borderRadius: 8,
   overflow: 'hidden',
   backgroundColor: '#f5f5f5',
-})
-
-const Badge = styled('span', {
-  display: 'inline-block',
-  padding: '4px 8px',
-  borderRadius: 4,
-  fontSize: 12,
-  fontWeight: 500,
-  
-  variants: {
-    variant: {
-      active: {
-        backgroundColor: '#e8f5e9',
-        color: '#2e7d32',
-      },
-      inactive: {
-        backgroundColor: '#ffebee',
-        color: '#c62828',
-      },
-      new: {
-        backgroundColor: '#e3f2fd',
-        color: '#1976d2',
-      }
-    }
-  }
 })
 
 const ActionButton = styled('button', {
@@ -160,48 +130,44 @@ const ActionButton = styled('button', {
   }
 })
 
-interface Product {
+interface Category {
   id: string
   name: string
-  sku: string
-  price: number
-  cost_price: number
-  is_active: boolean
-  is_new: boolean
-  category: { name: string } | null
-  images: Array<{ url: string; position: number }>
-  variants: Array<{ id: string }>
+  slug: string
+  image_url: string | null
+  sort_order: number
+  productCount: number
 }
 
-interface ProductsPageProps {
-  products: Product[]
+interface CategoriesPageProps {
+  categories: Category[]
 }
 
-export default function ProductsPage({ products: initialProducts }: ProductsPageProps) {
+export default function CategoriesPage({ categories: initialCategories }: CategoriesPageProps) {
   const router = useRouter()
-  const [products, setProducts] = useState(initialProducts)
+  const [categories, setCategories] = useState(initialCategories)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    if (!confirm('Are you sure you want to delete this category? Products in this category will be unassigned.')) return
     
     setDeleting(id)
     try {
-      // Delete related records first
-      await supabase.from('product_images').delete().eq('product_id', id)
-      await supabase.from('product_variants').delete().eq('product_id', id)
-      await supabase.from('cart').delete().eq('product_id', id)
-      await supabase.from('wishlist').delete().eq('product_id', id)
+      // Unassign products
+      await supabase.from('products').update({ category_id: null }).eq('category_id', id)
       
-      // Delete product
-      const { error } = await supabase.from('products').delete().eq('id', id)
+      // Delete subcategories
+      await supabase.from('subcategories').delete().eq('category_id', id)
+      
+      // Delete category
+      const { error } = await supabase.from('categories').delete().eq('id', id)
       
       if (error) throw error
       
-      setProducts(prev => prev.filter(p => p.id !== id))
+      setCategories(prev => prev.filter(c => c.id !== id))
     } catch (error) {
-      console.error('Error deleting product:', error)
-      alert('Failed to delete product')
+      console.error('Error deleting category:', error)
+      alert('Failed to delete category')
     } finally {
       setDeleting(null)
     }
@@ -210,7 +176,7 @@ export default function ProductsPage({ products: initialProducts }: ProductsPage
   return (
     <>
       <Head>
-        <title>Products | Admin Dashboard</title>
+        <title>Categories | Admin Dashboard</title>
       </Head>
       
       <Container>
@@ -226,13 +192,13 @@ export default function ProductsPage({ products: initialProducts }: ProductsPage
 
         <Main>
           <PageHeader>
-            <Title>Products</Title>
-            <AddButton href="/admin/products/new">
+            <Title>Categories</Title>
+            <AddButton href="/admin/categories/new">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Add Product
+              Add Category
             </AddButton>
           </PageHeader>
 
@@ -242,65 +208,52 @@ export default function ProductsPage({ products: initialProducts }: ProductsPage
                 <tr>
                   <Th>Image</Th>
                   <Th>Name</Th>
-                  <Th>SKU</Th>
-                  <Th>Category</Th>
-                  <Th>Price</Th>
-                  <Th>Cost</Th>
-                  <Th>Variants</Th>
-                  <Th>Status</Th>
+                  <Th>Slug</Th>
+                  <Th>Products</Th>
+                  <Th>Order</Th>
                   <Th>Actions</Th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
+                {categories.map((category) => (
+                  <tr key={category.id}>
                     <Td>
-                      <ProductImage>
-                        {product.images[0] && (
+                      <CategoryImage>
+                        {category.image_url && (
                           <Image
-                            src={product.images[0].url}
-                            alt={product.name}
+                            src={category.image_url}
+                            alt={category.name}
                             fill
                             style={{ objectFit: 'cover' }}
                           />
                         )}
-                      </ProductImage>
+                      </CategoryImage>
                     </Td>
-                    <Td>
-                      <div style={{ fontWeight: 500 }}>{product.name}</div>
-                      {product.is_new && <Badge variant="new" style={{ marginTop: 4 }}>NEW</Badge>}
-                    </Td>
-                    <Td>{product.sku}</Td>
-                    <Td>{product.category?.name || '-'}</Td>
-                    <Td>£{product.price.toFixed(2)}</Td>
-                    <Td>£{(product.cost_price || 0).toFixed(2)}</Td>
-                    <Td>{product.variants.length}</Td>
-                    <Td>
-                      <Badge variant={product.is_active ? 'active' : 'inactive'}>
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </Td>
+                    <Td style={{ fontWeight: 500 }}>{category.name}</Td>
+                    <Td style={{ color: '#666666' }}>{category.slug}</Td>
+                    <Td>{category.productCount}</Td>
+                    <Td>{category.sort_order}</Td>
                     <Td>
                       <ActionButton
                         variant="edit"
-                        onClick={() => router.push(`/admin/products/${product.id}`)}
+                        onClick={() => router.push(`/admin/categories/${category.id}`)}
                       >
                         Edit
                       </ActionButton>
                       <ActionButton
                         variant="delete"
-                        onClick={() => handleDelete(product.id)}
-                        disabled={deleting === product.id}
+                        onClick={() => handleDelete(category.id)}
+                        disabled={deleting === category.id}
                       >
-                        {deleting === product.id ? '...' : 'Delete'}
+                        {deleting === category.id ? '...' : 'Delete'}
                       </ActionButton>
                     </Td>
                   </tr>
                 ))}
-                {products.length === 0 && (
+                {categories.length === 0 && (
                   <tr>
-                    <Td colSpan={9} style={{ textAlign: 'center', color: '#666666', padding: 48 }}>
-                      No products yet. <Link href="/admin/products/new" style={{ color: '#1976d2' }}>Add your first product</Link>
+                    <Td colSpan={6} style={{ textAlign: 'center', color: '#666666', padding: 48 }}>
+                      No categories yet. <Link href="/admin/categories/new" style={{ color: '#1976d2' }}>Add your first category</Link>
                     </Td>
                   </tr>
                 )}
@@ -313,39 +266,30 @@ export default function ProductsPage({ products: initialProducts }: ProductsPage
   )
 }
 
-export const getServerSideProps: GetServerSideProps<ProductsPageProps> = async () => {
-  const { data: products } = await supabase
-    .from('products')
-    .select(`
-      id,
-      name,
-      sku,
-      price,
-      cost_price,
-      is_active,
-      is_new,
-      category:categories(name),
-      images:product_images(url, position),
-      variants:product_variants(id)
-    `)
-    .order('created_at', { ascending: false })
+export const getServerSideProps: GetServerSideProps<CategoriesPageProps> = async () => {
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order')
 
-  const mappedProducts = (products || []).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    sku: p.sku,
-    price: p.price,
-    cost_price: p.cost_price,
-    is_active: p.is_active,
-    is_new: p.is_new,
-    category: Array.isArray(p.category) ? p.category[0] || null : p.category,
-    images: (p.images || []).sort((a: any, b: any) => a.position - b.position),
-    variants: p.variants || [],
-  }))
+  // Get product counts
+  const categoriesWithCounts = await Promise.all(
+    (categories || []).map(async (cat: any) => {
+      const { count } = await supabase
+        .from('products')
+        .select('id', { count: 'exact' })
+        .eq('category_id', cat.id)
+      
+      return {
+        ...cat,
+        productCount: count || 0,
+      }
+    })
+  )
 
   return {
     props: {
-      products: mappedProducts,
+      categories: categoriesWithCounts,
     }
   }
 }

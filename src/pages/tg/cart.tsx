@@ -1,6 +1,6 @@
 import Head from 'next/head'
-import Image from 'next/image'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import { styled } from 'stitches.config'
@@ -11,22 +11,22 @@ import { lightImpact, successNotification } from '@/lib/telegram/haptics'
 
 const Container = styled('div', {
   minHeight: '100vh',
-  paddingBottom: 190,
   background:
-    'radial-gradient(circle at top, rgba(99,102,241,0.12) 0, transparent 55%), radial-gradient(circle at bottom, rgba(15,23,42,0.95) 0, #020617 70%)',
-  color: '#e5e7eb',
+    'radial-gradient(circle at top, rgba(99,102,241,0.18) 0, transparent 55%), radial-gradient(circle at bottom, rgba(15,23,42,0.96) 0, #020617 70%)',
+  paddingBottom: 180,
 })
 
 const Header = styled('header', {
   padding: '12px 16px',
-  backgroundColor: 'rgba(15,23,42,0.96)',
+  background:
+    'linear-gradient(to right, rgba(15,23,42,0.98), rgba(15,23,42,0.96))',
   display: 'flex',
   alignItems: 'center',
   gap: 12,
   position: 'sticky',
   top: 0,
   zIndex: 100,
-  borderBottom: '1px solid rgba(148,163,184,0.35)',
+  borderBottom: '1px solid rgba(148,163,184,0.5)',
   backdropFilter: 'blur(10px)',
 })
 
@@ -34,24 +34,18 @@ const BackButton = styled('button', {
   width: 36,
   height: 36,
   borderRadius: 999,
-  backgroundColor: 'rgba(15,23,42,0.9)',
-  border: '1px solid rgba(148,163,184,0.5)',
+  backgroundColor: '#020617',
+  border: '1px solid rgba(148,163,184,0.7)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
   color: '#e5e7eb',
-  transition: 'transform 0.12s ease, box-shadow 0.12s ease',
+  boxShadow: '0 8px 20px rgba(15,23,42,0.85)',
 
   '&:active': {
-    transform: 'scale(0.94)',
-    boxShadow: '0 0 0 1px rgba(94,234,212,0.5)',
+    transform: 'scale(0.95)',
   },
-})
-
-const TitleWrap = styled('div', {
-  display: 'flex',
-  flexDirection: 'column',
 })
 
 const Title = styled('h1', {
@@ -61,20 +55,11 @@ const Title = styled('h1', {
   color: '#e5e7eb',
 })
 
-const Subtitle = styled('span', {
-  fontSize: 11,
-  color: 'rgba(148,163,184,0.95)',
-})
-
 const CartCount = styled('span', {
   marginLeft: 'auto',
   fontSize: 12,
   fontWeight: 600,
-  padding: '4px 10px',
-  borderRadius: 999,
-  backgroundColor: 'rgba(15,23,42,0.9)',
-  border: '1px solid rgba(148,163,184,0.5)',
-  color: 'rgba(226,232,240,0.98)',
+  color: 'rgba(148,163,184,0.95)',
 })
 
 const CartList = styled('div', {
@@ -86,10 +71,10 @@ const CartItem = styled('div', {
   gap: 12,
   padding: 12,
   background:
-    'radial-gradient(circle at top left, rgba(148,163,184,0.1), rgba(15,23,42,0.96))',
+    'linear-gradient(to bottom right, rgba(15,23,42,0.95), rgba(15,23,42,0.9))',
   borderRadius: 18,
-  marginBottom: 12,
-  boxShadow: '0 14px 35px rgba(15,23,42,0.9)',
+  marginBottom: 10,
+  boxShadow: '0 14px 30px rgba(15,23,42,0.9)',
   border: '1px solid rgba(30,64,175,0.6)',
 })
 
@@ -97,11 +82,11 @@ const ItemImage = styled('div', {
   position: 'relative',
   width: 80,
   height: 100,
-  borderRadius: 14,
+  borderRadius: 12,
   overflow: 'hidden',
-  backgroundColor: 'rgba(15,23,42,0.9)',
+  background:
+    'radial-gradient(circle at top, rgba(15,23,42,0.85), #020617)',
   flexShrink: 0,
-  border: '1px solid rgba(148,163,184,0.5)',
 })
 
 const ItemDetails = styled('div', {
@@ -116,7 +101,7 @@ const ItemName = styled(Link, {
   fontWeight: 600,
   margin: 0,
   marginBottom: 4,
-  color: 'rgba(226,232,240,0.98)',
+  color: '#e5e7eb',
   textDecoration: 'none',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -126,20 +111,14 @@ const ItemName = styled(Link, {
 const ItemVariant = styled('span', {
   fontSize: 11,
   color: 'rgba(148,163,184,0.95)',
-  marginBottom: 6,
-})
-
-const ItemPriceRow = styled('div', {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: 'auto',
+  marginBottom: 4,
 })
 
 const ItemPrice = styled('span', {
   fontSize: 15,
   fontWeight: 700,
-  color: '#f9fafb',
+  color: '#a5b4fc',
+  marginTop: 'auto',
 })
 
 const QuantityControls = styled('div', {
@@ -150,11 +129,11 @@ const QuantityControls = styled('div', {
 })
 
 const QuantityButton = styled('button', {
-  width: 28,
-  height: 28,
+  width: 26,
+  height: 26,
   borderRadius: 999,
-  border: '1px solid rgba(148,163,184,0.7)',
-  backgroundColor: 'rgba(15,23,42,0.9)',
+  border: 'none',
+  backgroundColor: '#020617',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -162,20 +141,23 @@ const QuantityButton = styled('button', {
   color: '#e5e7eb',
   fontSize: 16,
   fontWeight: 600,
-  transition: 'transform 0.12s ease, background-color 0.12s ease',
+  boxShadow: '0 6px 16px rgba(15,23,42,0.9)',
 
   '&:active': {
     transform: 'scale(0.9)',
-    backgroundColor: 'rgba(30,64,175,0.95)',
+  },
+
+  '&:disabled': {
+    opacity: 0.4,
   },
 })
 
 const QuantityValue = styled('span', {
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 600,
   minWidth: 20,
   textAlign: 'center',
-  color: 'rgba(226,232,240,0.98)',
+  color: '#e5e7eb',
 })
 
 const RemoveButton = styled('button', {
@@ -183,30 +165,26 @@ const RemoveButton = styled('button', {
   border: 'none',
   padding: 4,
   cursor: 'pointer',
-  color: 'rgba(148,163,184,0.9)',
+  color: 'rgba(148,163,184,0.85)',
   alignSelf: 'flex-start',
-  transition: 'transform 0.12s ease, color 0.12s ease',
 
   '&:active': {
-    transform: 'scale(0.9)',
     color: '#f97373',
   },
 })
-
-// Summary bottom panel
 
 const Summary = styled('div', {
   position: 'fixed',
   bottom: 0,
   left: 0,
   right: 0,
-  padding: '12px 14px 16px',
+  padding: '10px 10px 12px',
   background:
-    'linear-gradient(to top, rgba(15,23,42,0.98), rgba(15,23,42,0.94))',
-  borderTop: '1px solid rgba(148,163,184,0.45)',
-  boxShadow: '0 -12px 35px rgba(15,23,42,1)',
-  backdropFilter: 'blur(12px)',
+    'linear-gradient(to top, rgba(15,23,42,0.98), rgba(15,23,42,0.95))',
+  borderTop: '1px solid rgba(148,163,184,0.6)',
+  boxShadow: '0 -16px 40px rgba(15,23,42,0.95)',
   zIndex: 120,
+  backdropFilter: 'blur(10px)',
 })
 
 const SummaryInner = styled('div', {
@@ -218,18 +196,18 @@ const SummaryRow = styled('div', {
   display: 'flex',
   justifyContent: 'space-between',
   marginBottom: 6,
-  fontSize: 13,
-  color: 'rgba(148,163,184,0.95)',
+  fontSize: 12,
+  color: 'rgba(148,163,184,0.96)',
 
   variants: {
     total: {
       true: {
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: 700,
-        color: '#f9fafb',
+        color: '#e5e7eb',
         marginTop: 8,
         paddingTop: 10,
-        borderTop: '1px dashed rgba(148,163,184,0.6)',
+        borderTop: '1px dashed rgba(148,163,184,0.7)',
         marginBottom: 0,
       },
     },
@@ -238,34 +216,33 @@ const SummaryRow = styled('div', {
 
 const ShippingHint = styled('div', {
   fontSize: 11,
-  color: 'rgba(148,163,184,0.95)',
-  marginTop: 4,
+  marginTop: 2,
+  marginBottom: 4,
+  color: 'rgba(129,140,248,0.95)',
 })
 
 const CheckoutButton = styled('button', {
   width: '100%',
-  padding: '13px',
+  padding: '12px',
   borderRadius: 999,
   border: 'none',
-  marginTop: 12,
-  background: 'linear-gradient(135deg, #22c55e, #4ade80)',
+  background:
+    'linear-gradient(135deg, #22c55e, #4ade80)',
   color: '#022c22',
   fontSize: 14,
   fontWeight: 800,
   cursor: 'pointer',
+  marginTop: 12,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
-  boxShadow: '0 12px 32px rgba(22,163,74,0.75)',
-  letterSpacing: 0.03,
+  boxShadow: '0 14px 32px rgba(22,163,74,0.75)',
 
   '&:active': {
     transform: 'scale(0.97)',
   },
 })
-
-// Empty / loading
 
 const EmptyState = styled('div', {
   display: 'flex',
@@ -277,21 +254,21 @@ const EmptyState = styled('div', {
 })
 
 const EmptyIcon = styled('div', {
-  width: 100,
-  height: 100,
+  width: 96,
+  height: 96,
   borderRadius: 30,
   background:
-    'radial-gradient(circle at top, rgba(148,163,184,0.2), rgba(15,23,42,1))',
+    'radial-gradient(circle at top, rgba(15,23,42,0.9), #020617)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   marginBottom: 20,
   color: 'rgba(148,163,184,0.95)',
-  boxShadow: '0 18px 40px rgba(15,23,42,1)',
+  boxShadow: '0 18px 40px rgba(15,23,42,0.95)',
 })
 
 const EmptyTitle = styled('h2', {
-  fontSize: 20,
+  fontSize: 18,
   fontWeight: 700,
   margin: 0,
   marginBottom: 8,
@@ -299,22 +276,23 @@ const EmptyTitle = styled('h2', {
 })
 
 const EmptyText = styled('p', {
-  fontSize: 14,
+  fontSize: 13,
   margin: 0,
-  marginBottom: 24,
-  color: 'rgba(148,163,184,0.95)',
+  marginBottom: 22,
+  color: 'rgba(148,163,184,0.96)',
   lineHeight: 1.5,
 })
 
 const ShopButton = styled(Link, {
-  padding: '12px 30px',
+  padding: '12px 32px',
   borderRadius: 999,
-  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-  color: '#f9fafb',
+  background:
+    'linear-gradient(135deg, #6366f1, #8b5cf6)',
+  color: '#e5e7eb',
   textDecoration: 'none',
   fontSize: 14,
   fontWeight: 700,
-  boxShadow: '0 12px 28px rgba(99,102,241,0.7)',
+  boxShadow: '0 14px 32px rgba(79,70,229,0.8)',
 
   '&:active': {
     transform: 'scale(0.97)',
@@ -326,18 +304,18 @@ const LoadingState = styled('div', {
   alignItems: 'center',
   justifyContent: 'center',
   padding: '64px 16px',
-  color: 'rgba(148,163,184,0.95)',
+  color: 'rgba(148,163,184,0.96)',
   fontSize: 13,
 })
 
 export default function CartPage() {
   const router = useRouter()
-  const { items, isLoading, totalItems, totalPrice, updateQuantity, removeFromCart } = useCart()
+  const { items, isLoading, totalItems, totalPrice, updateQuantity, removeFromCart } =
+    useCart()
 
   const shippingCost = totalPrice >= 50 ? 0 : 4.99
   const finalTotal = totalPrice + shippingCost
 
-  // Telegram MainButton checkout
   useEffect(() => {
     const webApp = getTelegramWebApp()
     if (webApp && items.length > 0) {
@@ -396,15 +374,14 @@ export default function CartPage() {
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </BackButton>
-            <TitleWrap>
-              <Title>Shopping Cart</Title>
-              <Subtitle>Review your picks before checkout</Subtitle>
-            </TitleWrap>
-            {items.length > 0 && <CartCount>{totalItems} item{totalItems > 1 ? 's' : ''}</CartCount>}
+            <Title>Shopping Bag</Title>
+            {items.length > 0 && (
+              <CartCount>{totalItems} item{totalItems > 1 ? 's' : ''}</CartCount>
+            )}
           </Header>
 
           {isLoading ? (
-            <LoadingState>Loading cart…</LoadingState>
+            <LoadingState>Loading your bag…</LoadingState>
           ) : items.length === 0 ? (
             <EmptyState>
               <EmptyIcon>
@@ -414,20 +391,20 @@ export default function CartPage() {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.6"
+                  strokeWidth="1.5"
                 >
                   <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                   <line x1="3" y1="6" x2="21" y2="6" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
               </EmptyIcon>
-              <EmptyTitle>Your cart is empty</EmptyTitle>
+              <EmptyTitle>Your bag is empty</EmptyTitle>
               <EmptyText>
-                Nothing in the bag yet.
+                Add something from the latest drop
                 <br />
-                Jump back in and add your favourites.
+                and it will show up here.
               </EmptyText>
-              <ShopButton href="/tg">Back to shop</ShopButton>
+              <ShopButton href="/tg">Browse the sauce</ShopButton>
             </EmptyState>
           ) : (
             <>
@@ -454,17 +431,16 @@ export default function CartPage() {
                       <ItemVariant>
                         {item.variant?.colour} / {item.variant?.size}
                       </ItemVariant>
-                      <ItemPriceRow>
-                        <ItemPrice>
-                          £{((item.product?.price || 0) * item.quantity).toFixed(2)}
-                        </ItemPrice>
-                      </ItemPriceRow>
+                      <ItemPrice>
+                        £{((item.product?.price || 0) * item.quantity).toFixed(2)}
+                      </ItemPrice>
 
                       <QuantityControls>
                         <QuantityButton
                           onClick={() =>
                             handleQuantityChange(item.id, item.quantity - 1)
                           }
+                          disabled={item.quantity <= 1}
                         >
                           −
                         </QuantityButton>
@@ -511,7 +487,7 @@ export default function CartPage() {
                   </SummaryRow>
                   {shippingCost > 0 && (
                     <ShippingHint>
-                      Free shipping kicks in at £50+
+                      Free shipping unlocks at £50+
                     </ShippingHint>
                   )}
                   <SummaryRow total>
@@ -520,21 +496,14 @@ export default function CartPage() {
                   </SummaryRow>
                   <CheckoutButton onClick={() => router.push('/tg/checkout')}>
                     <svg
-                      width="16"
-                      height="16"
+                      width="18"
+                      height="18"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
                     >
-                      <rect
-                        x="1"
-                        y="4"
-                        width="22"
-                        height="16"
-                        rx="2"
-                        ry="2"
-                      />
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                       <line x1="1" y1="10" x2="23" y2="10" />
                     </svg>
                     Proceed to checkout

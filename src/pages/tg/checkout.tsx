@@ -288,13 +288,16 @@ const FreeShippingBadge = styled('div', {
   alignItems: 'center',
   gap: 6,
   padding: '8px 12px',
-  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  backgroundColor: 'rgba(34, 197, 94, 0.08)',
   borderRadius: 8,
-  color: '#22c55e',
+  color: '#16a34a',
   fontSize: 12,
   fontWeight: 600,
   marginTop: 8,
 })
+
+const DEFAULT_FREE_THRESHOLD = 50
+const DEFAULT_BASE_SHIPPING = 4.99
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -313,31 +316,72 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  const shippingCost = totalPrice >= 50 ? 0 : 4.99
+  const [shippingSettings, setShippingSettings] = useState({
+    baseShippingCost: DEFAULT_BASE_SHIPPING,
+    freeShippingThreshold: DEFAULT_FREE_THRESHOLD,
+  })
+
+  // Load shipping settings from DB (small, non-breaking table)
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('shipping_settings')
+          .select('base_shipping_cost, free_shipping_threshold')
+          .eq('is_default', true)
+          .limit(1)
+          .single()
+
+        if (!error && data && !cancelled) {
+          setShippingSettings({
+            baseShippingCost:
+              data.base_shipping_cost ?? DEFAULT_BASE_SHIPPING,
+            freeShippingThreshold:
+              data.free_shipping_threshold ?? DEFAULT_FREE_THRESHOLD,
+          })
+        }
+      } catch (e) {
+        // Fallback to defaults silently
+        console.log('Using default shipping settings', e)
+      }
+    }
+
+    loadSettings()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const shippingCost =
+    totalPrice >= shippingSettings.freeShippingThreshold || totalPrice === 0
+      ? 0
+      : shippingSettings.baseShippingCost
+
   const finalTotal = totalPrice + shippingCost
 
-  // Setup Telegram MainButton
+  // Telegram MainButton
   useEffect(() => {
     const webApp = getTelegramWebApp()
     if (webApp && items.length > 0) {
+      const handleSubmit = () => {
+        handlePlaceOrder()
+      }
+
       webApp.MainButton.setParams({
         text: `Place Order - £${finalTotal.toFixed(2)}`,
         is_visible: true,
         is_active: !isSubmitting,
       })
-      
-      const handleSubmit = () => {
-        handlePlaceOrder()
-      }
-      
       webApp.MainButton.onClick(handleSubmit)
-      
+
       return () => {
         webApp.MainButton.offClick(handleSubmit)
         webApp.MainButton.hide()
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length, finalTotal, isSubmitting])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -362,6 +406,7 @@ export default function CheckoutPage() {
       return
     }
 
+    lightImpact()
     setIsSubmitting(true)
     setError('')
 
@@ -371,7 +416,6 @@ export default function CheckoutPage() {
       
       // If no user, try to create or find a guest user based on telegram_id
       if (!userId && telegramUser?.id) {
-        // Check if telegram user exists
         const { data: existingUser } = await supabase
           .from('telegram_users')
           .select('id')
@@ -381,7 +425,6 @@ export default function CheckoutPage() {
         if (existingUser) {
           userId = existingUser.id
         } else {
-          // Create a telegram user record
           const { data: newUser, error: userError } = await supabase
             .from('telegram_users')
             .insert({
@@ -423,7 +466,7 @@ export default function CheckoutPage() {
       // Generate order number
       const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`
 
-      // Create order with schema-correct fields
+      // Create order
       const orderData = {
         order_number: orderNumber,
         user_id: userId,
@@ -448,7 +491,7 @@ export default function CheckoutPage() {
 
       if (orderError) throw orderError
 
-      // Create order items with schema-correct fields
+      // Order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.product_id,
@@ -468,12 +511,9 @@ export default function CheckoutPage() {
 
       if (itemsError) throw itemsError
 
-      // Clear cart
       await clearCart()
-
       successNotification()
 
-      // Redirect to order confirmation
       router.push(`/tg/order/${order.id}`)
     } catch (err: any) {
       console.error('Error placing order:', err)
@@ -489,6 +529,11 @@ export default function CheckoutPage() {
     return null
   }
 
+  const remainingForFree =
+    shippingSettings.freeShippingThreshold > 0
+      ? Math.max(0, shippingSettings.freeShippingThreshold - totalPrice)
+      : 0
+
   return (
     <>
       <Head>
@@ -499,9 +544,17 @@ export default function CheckoutPage() {
         <Container>
           <Header>
             <BackButton onClick={() => router.back()}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M19 12H5"/>
-                <path d="M12 19l-7-7 7-7"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M19 12H5" />
+                <path d="M12 19l-7-7 7-7" />
               </svg>
             </BackButton>
             <Title>Checkout</Title>
@@ -526,8 +579,13 @@ export default function CheckoutPage() {
 
           {error && (
             <ErrorMessage>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
               </svg>
               {error}
             </ErrorMessage>
@@ -536,8 +594,8 @@ export default function CheckoutPage() {
           <Section>
             <SectionTitle>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
               Contact Information
             </SectionTitle>
@@ -575,8 +633,8 @@ export default function CheckoutPage() {
           <Section>
             <SectionTitle>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                <circle cx="12" cy="10" r="3"/>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
               </svg>
               Delivery Address
             </SectionTitle>
@@ -621,31 +679,49 @@ export default function CheckoutPage() {
           <Section>
             <SectionTitle>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 0 1-8 0"/>
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
               Order Summary
             </SectionTitle>
             <OrderSummary>
               <SummaryRow>
-                <span>Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
+                <span>
+                  Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})
+                </span>
                 <span>£{totalPrice.toFixed(2)}</span>
               </SummaryRow>
               <SummaryRow>
                 <span>Shipping</span>
-                <span style={{ color: shippingCost === 0 ? '#22c55e' : undefined, fontWeight: shippingCost === 0 ? 600 : 400 }}>
+                <span
+                  style={{
+                    color: shippingCost === 0 ? '#22c55e' : undefined,
+                    fontWeight: shippingCost === 0 ? 600 : 400,
+                  }}
+                >
                   {shippingCost === 0 ? 'FREE' : `£${shippingCost.toFixed(2)}`}
                 </span>
               </SummaryRow>
-              {shippingCost === 0 && (
+
+              {shippingSettings.freeShippingThreshold > 0 && (
                 <FreeShippingBadge>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                   </svg>
-                  Free shipping on orders £50+
+                  {shippingCost === 0
+                    ? 'You unlocked free shipping!'
+                    : `Spend £${remainingForFree.toFixed(
+                        2
+                      )} more for free shipping`}
                 </FreeShippingBadge>
               )}
+
               <SummaryRow total>
                 <span>Total</span>
                 <span>£{finalTotal.toFixed(2)}</span>
@@ -655,17 +731,21 @@ export default function CheckoutPage() {
         </Container>
 
         <BottomBar>
-          <PlaceOrderButton
-            onClick={handlePlaceOrder}
-            disabled={isSubmitting}
-          >
+          <PlaceOrderButton onClick={handlePlaceOrder} disabled={isSubmitting}>
             {isSubmitting ? (
               <>Processing...</>
             ) : (
               <>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14"/>
-                  <path d="M12 5l7 7-7 7"/>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5l7 7-7 7" />
                 </svg>
                 Place Order · £{finalTotal.toFixed(2)}
               </>
