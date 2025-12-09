@@ -2,7 +2,7 @@ import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, TouchEvent } from 'react'
 import { styled, keyframes } from 'stitches.config'
 import { TelegramLayout } from '@/components/telegram'
 import { supabase } from '@/lib/supabase'
@@ -31,6 +31,117 @@ const ImageShell = styled('div', {
   overflow: 'hidden',
   boxShadow: '0 20px 45px rgba(15,23,42,0.85)',
   borderBottom: '1px solid rgba(148,163,184,0.45)',
+  touchAction: 'pan-y pinch-zoom',
+})
+
+const ImageSlider = styled('div', {
+  display: 'flex',
+  height: '100%',
+  transition: 'transform 0.3s ease-out',
+})
+
+const ImageSlide = styled('div', {
+  position: 'relative',
+  minWidth: '100%',
+  height: '100%',
+})
+
+const GalleryNav = styled('button', {
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: 36,
+  height: 36,
+  borderRadius: 999,
+  backgroundColor: 'rgba(15,23,42,0.8)',
+  border: '1px solid rgba(148,163,184,0.4)',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 10,
+  color: '#e5e7eb',
+  transition: 'all 0.15s ease',
+  opacity: 0.8,
+
+  '&:hover': {
+    opacity: 1,
+    backgroundColor: 'rgba(15,23,42,0.95)',
+  },
+
+  '&:active': {
+    transform: 'translateY(-50%) scale(0.94)',
+  },
+
+  '& svg': {
+    width: 18,
+    height: 18,
+  },
+
+  variants: {
+    side: {
+      left: {
+        left: 12,
+      },
+      right: {
+        right: 12,
+      },
+    },
+  },
+})
+
+const ThumbnailStrip = styled('div', {
+  display: 'flex',
+  gap: 8,
+  padding: '12px 16px',
+  backgroundColor: 'rgba(15,23,42,0.95)',
+  overflowX: 'auto',
+  scrollBehavior: 'smooth',
+  '&::-webkit-scrollbar': {
+    display: 'none',
+  },
+})
+
+const Thumbnail = styled('button', {
+  flexShrink: 0,
+  width: 56,
+  height: 56,
+  borderRadius: 10,
+  overflow: 'hidden',
+  border: '2px solid transparent',
+  padding: 0,
+  cursor: 'pointer',
+  transition: 'all 0.18s ease',
+  position: 'relative',
+  opacity: 0.6,
+
+  '&:active': {
+    transform: 'scale(0.95)',
+  },
+
+  variants: {
+    active: {
+      true: {
+        border: '2px solid #a5b4fc',
+        opacity: 1,
+        boxShadow: '0 0 12px rgba(165,180,252,0.4)',
+      },
+    },
+  },
+})
+
+const ImageCounter = styled('div', {
+  position: 'absolute',
+  bottom: 16,
+  right: 16,
+  padding: '6px 12px',
+  borderRadius: 999,
+  backgroundColor: 'rgba(15,23,42,0.85)',
+  border: '1px solid rgba(148,163,184,0.4)',
+  fontSize: 12,
+  fontWeight: 600,
+  color: '#e5e7eb',
+  zIndex: 5,
 })
 
 const Header = styled('header', {
@@ -424,6 +535,59 @@ export default function ProductPage({ product }: ProductPageProps) {
   const [selectedSize, setSelectedSize] = useState<string>('')
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  
+  // Touch/swipe state for image gallery
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
+  const thumbnailRef = useRef<HTMLDivElement>(null)
+
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.targetTouches[0].clientX
+  }
+
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    touchEndX.current = e.targetTouches[0].clientX
+  }
+
+  const handleTouchEnd = () => {
+    if (!product) return
+    const diff = touchStartX.current - touchEndX.current
+    const threshold = 50 // Minimum swipe distance
+
+    if (diff > threshold && currentImageIndex < product.images.length - 1) {
+      // Swipe left - next image
+      setCurrentImageIndex(prev => prev + 1)
+      lightImpact()
+    } else if (diff < -threshold && currentImageIndex > 0) {
+      // Swipe right - previous image
+      setCurrentImageIndex(prev => prev - 1)
+      lightImpact()
+    }
+  }
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index)
+    lightImpact()
+    // Scroll thumbnail into view
+    if (thumbnailRef.current) {
+      const thumbnail = thumbnailRef.current.children[index] as HTMLElement
+      if (thumbnail) {
+        thumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      }
+    }
+  }
+
+  const nextImage = () => {
+    if (product && currentImageIndex < product.images.length - 1) {
+      goToImage(currentImageIndex + 1)
+    }
+  }
+
+  const prevImage = () => {
+    if (currentImageIndex > 0) {
+      goToImage(currentImageIndex - 1)
+    }
+  }
 
   const colors = useMemo(() => {
     return (
@@ -558,7 +722,11 @@ export default function ProductPage({ product }: ProductPageProps) {
 
       <TelegramLayout showNav={false}>
         <Container>
-          <ImageShell>
+          <ImageShell
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <Header>
               <IconButton onClick={() => router.back()}>
                 <svg
@@ -584,28 +752,67 @@ export default function ProductPage({ product }: ProductPageProps) {
               </IconButton>
             </Header>
 
-            {product.images[currentImageIndex] && (
-              <Image
-                src={product.images[currentImageIndex]}
-                alt={product.name}
-                fill
-                style={{ objectFit: 'cover' }}
-                priority
-              />
+            <ImageSlider style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}>
+              {product.images.map((img, idx) => (
+                <ImageSlide key={idx}>
+                  <Image
+                    src={img}
+                    alt={`${product.name} - Image ${idx + 1}`}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    priority={idx === 0}
+                  />
+                </ImageSlide>
+              ))}
+            </ImageSlider>
+
+            {/* Navigation arrows */}
+            {product.images.length > 1 && (
+              <>
+                {currentImageIndex > 0 && (
+                  <GalleryNav side="left" onClick={prevImage}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                  </GalleryNav>
+                )}
+                {currentImageIndex < product.images.length - 1 && (
+                  <GalleryNav side="right" onClick={nextImage}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  </GalleryNav>
+                )}
+              </>
             )}
 
+            {/* Image counter */}
             {product.images.length > 1 && (
-              <ImageIndicators>
-                {product.images.map((_, idx) => (
-                  <ImageDot
-                    key={idx}
-                    active={idx === currentImageIndex}
-                    onClick={() => setCurrentImageIndex(idx)}
-                  />
-                ))}
-              </ImageIndicators>
+              <ImageCounter>
+                {currentImageIndex + 1} / {product.images.length}
+              </ImageCounter>
             )}
           </ImageShell>
+
+          {/* Thumbnail strip */}
+          {product.images.length > 1 && (
+            <ThumbnailStrip ref={thumbnailRef}>
+              {product.images.map((img, idx) => (
+                <Thumbnail
+                  key={idx}
+                  active={idx === currentImageIndex}
+                  onClick={() => goToImage(idx)}
+                >
+                  <Image
+                    src={img}
+                    alt={`Thumbnail ${idx + 1}`}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                  />
+                </Thumbnail>
+              ))}
+            </ThumbnailStrip>
+          )}
 
           <Content>
             <PriceRow>

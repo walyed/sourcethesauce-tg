@@ -65,7 +65,9 @@ export function CartProvider({ children }: CartProviderProps) {
   // Get user ID (from DB user or Telegram user)
   const userId = user?.id || null
   const telegramId = telegramUser?.id || null
-  const isAuthenticated = !!(userId || telegramId)
+  // For now, use localStorage primarily since Telegram auth may not work on desktop
+  // Only use DB cart when we have a proper authenticated user ID
+  const isAuthenticated = !!userId
 
   // Calculate totals
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -143,7 +145,7 @@ export function CartProvider({ children }: CartProviderProps) {
             id,
             product_id,
             variant_id,
-            quantity,
+            qty,
             product:products(
               id,
               name,
@@ -161,8 +163,6 @@ export function CartProvider({ children }: CartProviderProps) {
 
         if (userId) {
           query = query.eq('user_id', userId)
-        } else if (telegramId) {
-          query = query.eq('telegram_id', telegramId)
         }
 
         const { data, error } = await query
@@ -173,6 +173,7 @@ export function CartProvider({ children }: CartProviderProps) {
         } else {
           const cartItems = (data || []).map((item: any) => ({
             ...item,
+            quantity: item.qty, // Map qty to quantity for frontend consistency
             product: {
               ...item.product,
               images: item.product?.images?.sort((a: any, b: any) => a.position - b.position) || []
@@ -192,7 +193,7 @@ export function CartProvider({ children }: CartProviderProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, telegramId, isAuthenticated])
+  }, [userId, isAuthenticated])
 
   // Load cart on mount and when user changes
   useEffect(() => {
@@ -214,14 +215,8 @@ export function CartProvider({ children }: CartProviderProps) {
           const cartItem: any = {
             product_id: productId,
             variant_id: variantId,
-            quantity,
-          }
-
-          if (userId) {
-            cartItem.user_id = userId
-          }
-          if (telegramId) {
-            cartItem.telegram_id = telegramId
+            qty: quantity, // Use 'qty' to match database schema
+            user_id: userId, // Required field
           }
 
           const { error } = await supabase
@@ -260,7 +255,7 @@ export function CartProvider({ children }: CartProviderProps) {
       console.error('Error adding to cart:', error)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, telegramId, isAuthenticated, items, refreshCart])
+  }, [userId, isAuthenticated, items, refreshCart])
 
   // Remove item from cart
   const removeFromCart = useCallback(async (cartItemId: string) => {
@@ -298,7 +293,7 @@ export function CartProvider({ children }: CartProviderProps) {
       if (isAuthenticated) {
         const { error } = await supabase
           .from('cart')
-          .update({ quantity })
+          .update({ qty: quantity }) // Use 'qty' to match database schema
           .eq('id', cartItemId)
 
         if (error) {
@@ -324,16 +319,11 @@ export function CartProvider({ children }: CartProviderProps) {
   // Clear entire cart
   const clearCart = useCallback(async () => {
     try {
-      if (isAuthenticated) {
-        let query = supabase.from('cart').delete()
-
-        if (userId) {
-          query = query.eq('user_id', userId)
-        } else if (telegramId) {
-          query = query.eq('telegram_id', telegramId)
-        }
-
-        const { error } = await query
+      if (isAuthenticated && userId) {
+        const { error } = await supabase
+          .from('cart')
+          .delete()
+          .eq('user_id', userId)
 
         if (error) {
           console.error('Error clearing cart:', error)
@@ -348,7 +338,7 @@ export function CartProvider({ children }: CartProviderProps) {
     } catch (error) {
       console.error('Error clearing cart:', error)
     }
-  }, [isAuthenticated, userId, telegramId])
+  }, [isAuthenticated, userId])
 
   return (
     <CartContext.Provider value={{

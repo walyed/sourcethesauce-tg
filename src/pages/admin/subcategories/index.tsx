@@ -36,6 +36,7 @@ const NavLink = styled(Link, {
   color: '#ffffff',
   textDecoration: 'none',
   opacity: 0.8,
+  '&:hover': { opacity: 1 },
 })
 
 const Main = styled('main', {
@@ -78,6 +79,22 @@ const Section = styled('section', {
   boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
 })
 
+const FilterBar = styled('div', {
+  display: 'flex',
+  gap: 16,
+  marginBottom: 20,
+  alignItems: 'center',
+})
+
+const FilterSelect = styled('select', {
+  padding: '10px 16px',
+  border: '1px solid #ddd',
+  borderRadius: 8,
+  fontSize: 14,
+  backgroundColor: '#fff',
+  cursor: 'pointer',
+})
+
 const Table = styled('table', {
   width: '100%',
   borderCollapse: 'collapse',
@@ -99,7 +116,19 @@ const Td = styled('td', {
   verticalAlign: 'middle',
 })
 
-const CategoryImage = styled('div', {
+const CategoryBadge = styled('span', {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '4px 12px',
+  backgroundColor: '#e8f5e9',
+  borderRadius: 100,
+  fontSize: 12,
+  fontWeight: 500,
+  color: '#2e7d32',
+})
+
+const SubcategoryImage = styled('div', {
   position: 'relative',
   width: 48,
   height: 48,
@@ -130,44 +159,63 @@ const ActionButton = styled('button', {
   }
 })
 
+const EmptyState = styled('div', {
+  textAlign: 'center',
+  padding: 48,
+  color: '#666666',
+})
+
 interface Category {
+  id: string
+  name: string
+}
+
+interface Subcategory {
   id: string
   name: string
   slug: string
   image_url: string | null
   sort_order: number
+  category_id: string
+  category: Category
   productCount: number
 }
 
-interface CategoriesPageProps {
+interface SubcategoriesPageProps {
+  subcategories: Subcategory[]
   categories: Category[]
 }
 
-export default function CategoriesPage({ categories: initialCategories }: CategoriesPageProps) {
+export default function SubcategoriesPage({ 
+  subcategories: initialSubcategories, 
+  categories 
+}: SubcategoriesPageProps) {
   const router = useRouter()
-  const [categories, setCategories] = useState(initialCategories)
+  const [subcategories, setSubcategories] = useState(initialSubcategories)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [filterCategory, setFilterCategory] = useState<string>('all')
+
+  const filteredSubcategories = filterCategory === 'all'
+    ? subcategories
+    : subcategories.filter(s => s.category_id === filterCategory)
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category? Products in this category will be unassigned.')) return
+    if (!confirm('Are you sure you want to delete this subcategory? Products in this subcategory will be unassigned.')) return
     
     setDeleting(id)
     try {
       // Unassign products
-      await supabase.from('products').update({ category_id: null }).eq('category_id', id)
+      await supabase.from('products').update({ subcategory_id: null }).eq('subcategory_id', id)
       
-      // Delete subcategories
-      await supabase.from('subcategories').delete().eq('category_id', id)
-      
-      // Delete category
-      const { error } = await supabase.from('categories').delete().eq('id', id)
+      // Delete subcategory
+      const { error } = await supabase.from('subcategories').delete().eq('id', id)
       
       if (error) throw error
       
-      setCategories(prev => prev.filter(c => c.id !== id))
+      setSubcategories(prev => prev.filter(s => s.id !== id))
     } catch (error) {
-      console.error('Error deleting category:', error)
-      alert('Failed to delete category')
+      console.error('Error deleting subcategory:', error)
+      alert('Failed to delete subcategory')
     } finally {
       setDeleting(null)
     }
@@ -176,7 +224,7 @@ export default function CategoriesPage({ categories: initialCategories }: Catego
   return (
     <>
       <Head>
-        <title>Categories | Admin Dashboard</title>
+        <title>Subcategories | Admin Dashboard</title>
       </Head>
       
       <Container>
@@ -186,75 +234,99 @@ export default function CategoriesPage({ categories: initialCategories }: Catego
             <NavLink href="/admin">Dashboard</NavLink>
             <NavLink href="/admin/products">Products</NavLink>
             <NavLink href="/admin/categories">Categories</NavLink>
-            <NavLink href="/admin/subcategories">Subcategories</NavLink>
+            <NavLink href="/admin/subcategories" style={{ opacity: 1 }}>Subcategories</NavLink>
             <NavLink href="/admin/orders">Orders</NavLink>
           </Nav>
         </Header>
 
         <Main>
           <PageHeader>
-            <Title>Categories</Title>
-            <AddButton href="/admin/categories/new">
+            <Title>Subcategories</Title>
+            <AddButton href="/admin/subcategories/new">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Add Category
+              Add Subcategory
             </AddButton>
           </PageHeader>
 
           <Section>
+            <FilterBar>
+              <label style={{ fontWeight: 500, fontSize: 14 }}>Filter by Category:</label>
+              <FilterSelect 
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+              >
+                <option value="all">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </FilterSelect>
+              <span style={{ color: '#666', fontSize: 14 }}>
+                Showing {filteredSubcategories.length} subcategories
+              </span>
+            </FilterBar>
+
             <Table>
               <thead>
                 <tr>
                   <Th>Image</Th>
                   <Th>Name</Th>
                   <Th>Slug</Th>
+                  <Th>Category</Th>
                   <Th>Products</Th>
                   <Th>Order</Th>
                   <Th>Actions</Th>
                 </tr>
               </thead>
               <tbody>
-                {categories.map((category) => (
-                  <tr key={category.id}>
+                {filteredSubcategories.map((subcategory) => (
+                  <tr key={subcategory.id}>
                     <Td>
-                      <CategoryImage>
-                        {category.image_url && (
+                      <SubcategoryImage>
+                        {subcategory.image_url && (
                           <Image
-                            src={category.image_url}
-                            alt={category.name}
+                            src={subcategory.image_url}
+                            alt={subcategory.name}
                             fill
                             style={{ objectFit: 'cover' }}
                           />
                         )}
-                      </CategoryImage>
+                      </SubcategoryImage>
                     </Td>
-                    <Td style={{ fontWeight: 500 }}>{category.name}</Td>
-                    <Td style={{ color: '#666666' }}>{category.slug}</Td>
-                    <Td>{category.productCount}</Td>
-                    <Td>{category.sort_order}</Td>
+                    <Td style={{ fontWeight: 500 }}>{subcategory.name}</Td>
+                    <Td style={{ color: '#666666' }}>{subcategory.slug}</Td>
+                    <Td>
+                      <CategoryBadge>
+                        {subcategory.category?.name || 'Unknown'}
+                      </CategoryBadge>
+                    </Td>
+                    <Td>{subcategory.productCount}</Td>
+                    <Td>{subcategory.sort_order}</Td>
                     <Td>
                       <ActionButton
                         variant="edit"
-                        onClick={() => router.push(`/admin/categories/${category.id}`)}
+                        onClick={() => router.push(`/admin/subcategories/${subcategory.id}`)}
                       >
                         Edit
                       </ActionButton>
                       <ActionButton
                         variant="delete"
-                        onClick={() => handleDelete(category.id)}
-                        disabled={deleting === category.id}
+                        onClick={() => handleDelete(subcategory.id)}
+                        disabled={deleting === subcategory.id}
                       >
-                        {deleting === category.id ? '...' : 'Delete'}
+                        {deleting === subcategory.id ? '...' : 'Delete'}
                       </ActionButton>
                     </Td>
                   </tr>
                 ))}
-                {categories.length === 0 && (
+                {filteredSubcategories.length === 0 && (
                   <tr>
-                    <Td colSpan={6} style={{ textAlign: 'center', color: '#666666', padding: 48 }}>
-                      No categories yet. <Link href="/admin/categories/new" style={{ color: '#1976d2' }}>Add your first category</Link>
+                    <Td colSpan={7}>
+                      <EmptyState>
+                        No subcategories yet. <Link href="/admin/subcategories/new" style={{ color: '#1976d2' }}>Add your first subcategory</Link>
+                      </EmptyState>
                     </Td>
                   </tr>
                 )}
@@ -267,22 +339,32 @@ export default function CategoriesPage({ categories: initialCategories }: Catego
   )
 }
 
-export const getServerSideProps: GetServerSideProps<CategoriesPageProps> = async () => {
+export const getServerSideProps: GetServerSideProps<SubcategoriesPageProps> = async () => {
+  // Get all categories
   const { data: categories } = await supabase
     .from('categories')
-    .select('*')
+    .select('id, name')
     .order('sort_order')
 
-  // Get product counts
-  const categoriesWithCounts = await Promise.all(
-    (categories || []).map(async (cat: any) => {
+  // Get all subcategories with their parent category
+  const { data: subcategories } = await supabase
+    .from('subcategories')
+    .select(`
+      *,
+      category:categories(id, name)
+    `)
+    .order('sort_order')
+
+  // Get product counts for each subcategory
+  const subcategoriesWithCounts = await Promise.all(
+    (subcategories || []).map(async (sub: any) => {
       const { count } = await supabase
         .from('products')
         .select('id', { count: 'exact' })
-        .eq('category_id', cat.id)
+        .eq('subcategory_id', sub.id)
       
       return {
-        ...cat,
+        ...sub,
         productCount: count || 0,
       }
     })
@@ -290,7 +372,8 @@ export const getServerSideProps: GetServerSideProps<CategoriesPageProps> = async
 
   return {
     props: {
-      categories: categoriesWithCounts,
+      subcategories: subcategoriesWithCounts,
+      categories: categories || [],
     }
   }
 }

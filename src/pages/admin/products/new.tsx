@@ -4,13 +4,25 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
+interface Category {
+  id: string
+  name: string
+}
+
+interface Subcategory {
+  id: string
+  name: string
+  category_id: string
+}
+
 export default function AdminNewProduct() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState('')
-  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [images, setImages] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
@@ -21,22 +33,38 @@ export default function AdminNewProduct() {
     compare_at_price: '',
     sku: '',
     category_id: '',
+    subcategory_id: '',
     is_active: true,
     is_featured: false,
     is_new: true,
   })
 
-  // Fetch categories on mount
+  // Fetch categories and subcategories on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('id, name')
-        .order('name')
-      if (data) setCategories(data)
+    const fetchData = async () => {
+      const [{ data: cats }, { data: subcats }] = await Promise.all([
+        supabase.from('categories').select('id, name').eq('is_active', true).order('sort_order'),
+        supabase.from('subcategories').select('id, name, category_id').eq('is_active', true).order('sort_order'),
+      ])
+      if (cats) setCategories(cats)
+      if (subcats) setSubcategories(subcats)
     }
-    fetchCategories()
+    fetchData()
   }, [])
+
+  // Filter subcategories based on selected category
+  const filteredSubcategories = subcategories.filter(
+    sub => sub.category_id === formData.category_id
+  )
+
+  // Reset subcategory when category changes
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData({ 
+      ...formData, 
+      category_id: categoryId,
+      subcategory_id: '' // Reset subcategory
+    })
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -100,6 +128,10 @@ export default function AdminNewProduct() {
     setError('')
 
     try {
+      // Validate required fields
+      if (!formData.category_id) throw new Error('Please select a category')
+      if (!formData.subcategory_id) throw new Error('Please select a subcategory')
+
       // Create product
       const { data: product, error: productError } = await supabase
         .from('products')
@@ -110,7 +142,8 @@ export default function AdminNewProduct() {
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
           sku: formData.sku,
-          category_id: formData.category_id || null,
+          category_id: formData.category_id,
+          subcategory_id: formData.subcategory_id,
           is_active: formData.is_active,
           is_featured: formData.is_featured,
           is_new: formData.is_new,
@@ -261,11 +294,12 @@ export default function AdminNewProduct() {
 
                   <div style={{ marginBottom: 20 }}>
                     <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-                      Category
+                      Category *
                     </label>
                     <select
                       value={formData.category_id}
-                      onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      required
                       style={{
                         width: '100%',
                         padding: '12px 16px',
@@ -281,6 +315,40 @@ export default function AdminNewProduct() {
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+                      Subcategory *
+                    </label>
+                    <select
+                      value={formData.subcategory_id}
+                      onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
+                      required
+                      disabled={!formData.category_id}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #ddd',
+                        borderRadius: 8,
+                        fontSize: 14,
+                        boxSizing: 'border-box',
+                        backgroundColor: formData.category_id ? '#fff' : '#f5f5f5',
+                        cursor: formData.category_id ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      <option value="">
+                        {formData.category_id ? 'Select a subcategory' : 'Select a category first'}
+                      </option>
+                      {filteredSubcategories.map((sub) => (
+                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                      ))}
+                    </select>
+                    {formData.category_id && filteredSubcategories.length === 0 && (
+                      <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f57c00' }}>
+                        No subcategories for this category. <Link href="/admin/subcategories/new" style={{ color: '#1976d2' }}>Create one</Link>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

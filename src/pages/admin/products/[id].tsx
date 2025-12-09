@@ -2,23 +2,25 @@ import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface Category { id: string; name: string }
+interface Subcategory { id: string; name: string; category_id: string }
 interface ProductVariant { id?: string; colour: string; colour_hex: string; size: string; stock_quantity: number }
 
 interface ProductFormProps {
   categories: Category[]
+  subcategories: Subcategory[]
   product: {
     id: string; name: string; sku: string; description: string; price: number
-    cost_price: number | null; compare_at_price: number | null; category_id: string
+    cost_price: number | null; compare_at_price: number | null; category_id: string; subcategory_id: string | null
     is_active: boolean; is_new: boolean; is_featured: boolean
     images: string[]; variants: ProductVariant[]
   }
 }
 
-export default function ProductForm({ categories, product }: ProductFormProps) {
+export default function ProductForm({ categories, subcategories, product }: ProductFormProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -26,8 +28,20 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     name: product.name || '', sku: product.sku || '', description: product.description || '',
     price: product.price?.toString() || '', cost_price: product.cost_price?.toString() || '',
     compare_at_price: product.compare_at_price?.toString() || '', category_id: product.category_id || '',
+    subcategory_id: product.subcategory_id || '',
     is_active: product.is_active ?? true, is_new: product.is_new ?? false, is_featured: product.is_featured ?? false,
   })
+
+  // Filter subcategories based on selected category
+  const filteredSubcategories = useMemo(() => 
+    subcategories.filter(sub => sub.category_id === formData.category_id),
+  [subcategories, formData.category_id]
+  )
+
+  // Reset subcategory when category changes
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData({ ...formData, category_id: categoryId, subcategory_id: '' })
+  }
 
   const [variants, setVariants] = useState<ProductVariant[]>(product.variants?.length ? product.variants : [{ colour: '', colour_hex: '#000000', size: '', stock_quantity: 0 }])
   const [images, setImages] = useState<string[]>(product.images || [])
@@ -72,7 +86,8 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         name: formData.name.trim(), sku: formData.sku.trim(), description: formData.description.trim(),
         price: parseFloat(formData.price), cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
         compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-        category_id: formData.category_id || null, is_active: formData.is_active, is_new: formData.is_new, is_featured: formData.is_featured,
+        category_id: formData.category_id || null, subcategory_id: formData.subcategory_id || null,
+        is_active: formData.is_active, is_new: formData.is_new, is_featured: formData.is_featured,
       }
 
       const { error: updateError } = await supabase.from('products').update(productData).eq('id', product.id)
@@ -117,10 +132,17 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                 </div>
                 <div style={{ marginBottom: 20 }}><label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Description</label>
                   <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} style={{ width: '100%', padding: '12px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} placeholder="Enter product description" /></div>
-                <div><label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Category</label>
-                  <select value={formData.category_id} onChange={(e) => setFormData({ ...formData, category_id: e.target.value })} style={{ width: '100%', padding: '12px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', backgroundColor: '#fff' }}>
+                <div><label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Category *</label>
+                  <select value={formData.category_id} onChange={(e) => handleCategoryChange(e.target.value)} required style={{ width: '100%', padding: '12px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', backgroundColor: '#fff' }}>
                     <option value="">Select a category</option>{categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
                   </select></div>
+                <div style={{ marginTop: 16 }}><label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Subcategory *</label>
+                  <select value={formData.subcategory_id} onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })} required disabled={!formData.category_id} style={{ width: '100%', padding: '12px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', backgroundColor: formData.category_id ? '#fff' : '#f5f5f5', cursor: formData.category_id ? 'pointer' : 'not-allowed' }}>
+                    <option value="">{formData.category_id ? 'Select a subcategory' : 'Select a category first'}</option>
+                    {filteredSubcategories.map((sub) => (<option key={sub.id} value={sub.id}>{sub.name}</option>))}
+                  </select>
+                  {formData.category_id && filteredSubcategories.length === 0 && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f57c00' }}>No subcategories for this category. <Link href="/admin/subcategories/new" style={{ color: '#1976d2' }}>Create one</Link></p>}
+                </div>
               </div>
               <div style={{ backgroundColor: '#fff', borderRadius: 12, padding: 24, marginBottom: 24 }}>
                 <h2 style={{ margin: '0 0 24px', fontSize: 18 }}>Product Images</h2>
@@ -212,9 +234,12 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
 
 export const getServerSideProps: GetServerSideProps<ProductFormProps> = async ({ params }) => {
   const id = params?.id as string
-  const { data: categories } = await supabase.from('categories').select('id, name').order('name')
-  const { data: product } = await supabase.from('products').select(`*, images:product_images(id, url, position), variants:product_variants(id, colour, colour_hex, size)`).eq('id', id).single()
+  const [{ data: categories }, { data: subcategories }, { data: product }] = await Promise.all([
+    supabase.from('categories').select('id, name').eq('is_active', true).order('sort_order'),
+    supabase.from('subcategories').select('id, name, category_id').eq('is_active', true).order('sort_order'),
+    supabase.from('products').select(`*, images:product_images(id, url, position), variants:product_variants(id, colour, colour_hex, size)`).eq('id', id).single()
+  ])
   if (!product) return { notFound: true }
   const transformedProduct = { ...product, images: (product.images || []).sort((a: any, b: any) => a.position - b.position).map((img: any) => img.url), variants: (product.variants || []).map((v: any) => ({ id: v.id, colour: v.colour || '', colour_hex: v.colour_hex || '#000000', size: v.size || '', stock_quantity: 0 })) }
-  return { props: { categories: categories || [], product: transformedProduct } }
+  return { props: { categories: categories || [], subcategories: subcategories || [], product: transformedProduct } }
 }

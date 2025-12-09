@@ -364,6 +364,7 @@ export default function OrderDetailPage({ order }: OrderDetailProps) {
             <NavLink href="/admin">Dashboard</NavLink>
             <NavLink href="/admin/products">Products</NavLink>
             <NavLink href="/admin/categories">Categories</NavLink>
+            <NavLink href="/admin/subcategories">Subcategories</NavLink>
             <NavLink href="/admin/orders">Orders</NavLink>
           </Nav>
         </Header>

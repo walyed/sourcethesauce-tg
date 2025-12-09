@@ -13,7 +13,7 @@ const Container = styled('div', {
   minHeight: '100vh',
   background:
     'radial-gradient(circle at top, rgba(99,102,241,0.18) 0, transparent 55%), radial-gradient(circle at bottom, rgba(15,23,42,0.96) 0, #020617 70%)',
-  paddingBottom: 180,
+  paddingBottom: 220,
 })
 
 const Header = styled('header', {
@@ -63,30 +63,32 @@ const CartCount = styled('span', {
 })
 
 const CartList = styled('div', {
-  padding: '12px 16px 24px',
+  padding: '16px 16px 32px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
 })
 
 const CartItem = styled('div', {
   display: 'flex',
-  gap: 12,
-  padding: 12,
+  gap: 14,
+  padding: 14,
   background:
-    'linear-gradient(to bottom right, rgba(15,23,42,0.95), rgba(15,23,42,0.9))',
-  borderRadius: 18,
-  marginBottom: 10,
-  boxShadow: '0 14px 30px rgba(15,23,42,0.9)',
-  border: '1px solid rgba(30,64,175,0.6)',
+    'linear-gradient(to bottom right, rgba(30,41,59,0.95), rgba(15,23,42,0.95))',
+  borderRadius: 16,
+  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+  border: '1px solid rgba(148,163,184,0.15)',
 })
 
 const ItemImage = styled('div', {
   position: 'relative',
-  width: 80,
-  height: 100,
+  width: 90,
+  height: 110,
   borderRadius: 12,
   overflow: 'hidden',
-  background:
-    'radial-gradient(circle at top, rgba(15,23,42,0.85), #020617)',
+  background: 'rgba(30,41,59,0.8)',
   flexShrink: 0,
+  border: '1px solid rgba(148,163,184,0.1)',
 })
 
 const ItemDetails = styled('div', {
@@ -97,43 +99,47 @@ const ItemDetails = styled('div', {
 })
 
 const ItemName = styled(Link, {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 600,
   margin: 0,
-  marginBottom: 4,
-  color: '#e5e7eb',
+  marginBottom: 6,
+  color: '#f1f5f9',
   textDecoration: 'none',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  lineHeight: 1.3,
 })
 
 const ItemVariant = styled('span', {
-  fontSize: 11,
-  color: 'rgba(148,163,184,0.95)',
-  marginBottom: 4,
+  fontSize: 12,
+  color: 'rgba(148,163,184,0.9)',
+  marginBottom: 8,
 })
 
 const ItemPrice = styled('span', {
-  fontSize: 15,
+  fontSize: 16,
   fontWeight: 700,
   color: '#a5b4fc',
   marginTop: 'auto',
+  marginBottom: 4,
 })
 
 const QuantityControls = styled('div', {
   display: 'flex',
   alignItems: 'center',
-  gap: 8,
-  marginTop: 8,
+  gap: 10,
+  marginTop: 4,
 })
 
 const QuantityButton = styled('button', {
-  width: 26,
-  height: 26,
+  width: 28,
+  height: 28,
   borderRadius: 999,
-  border: 'none',
-  backgroundColor: '#020617',
+  border: '1px solid rgba(148,163,184,0.3)',
+  backgroundColor: 'rgba(30,41,59,0.8)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -141,10 +147,11 @@ const QuantityButton = styled('button', {
   color: '#e5e7eb',
   fontSize: 16,
   fontWeight: 600,
-  boxShadow: '0 6px 16px rgba(15,23,42,0.9)',
+  transition: 'all 0.15s ease',
 
   '&:active': {
     transform: 'scale(0.9)',
+    backgroundColor: 'rgba(99,102,241,0.3)',
   },
 
   '&:disabled': {
@@ -153,38 +160,42 @@ const QuantityButton = styled('button', {
 })
 
 const QuantityValue = styled('span', {
-  fontSize: 13,
-  fontWeight: 600,
-  minWidth: 20,
+  fontSize: 14,
+  fontWeight: 700,
+  minWidth: 24,
   textAlign: 'center',
-  color: '#e5e7eb',
+  color: '#f1f5f9',
 })
 
 const RemoveButton = styled('button', {
-  background: 'none',
-  border: 'none',
-  padding: 4,
+  background: 'rgba(239,68,68,0.1)',
+  border: '1px solid rgba(239,68,68,0.2)',
+  borderRadius: 8,
+  padding: 6,
   cursor: 'pointer',
-  color: 'rgba(148,163,184,0.85)',
+  color: 'rgba(248,113,113,0.9)',
   alignSelf: 'flex-start',
+  transition: 'all 0.15s ease',
 
   '&:active': {
-    color: '#f97373',
+    background: 'rgba(239,68,68,0.2)',
+    color: '#f87171',
+    transform: 'scale(0.95)',
   },
 })
 
 const Summary = styled('div', {
   position: 'fixed',
-  bottom: 0,
+  bottom: 'calc(72px + env(safe-area-inset-bottom))',
   left: 0,
   right: 0,
-  padding: '10px 10px 12px',
+  padding: '12px 16px 16px',
   background:
-    'linear-gradient(to top, rgba(15,23,42,0.98), rgba(15,23,42,0.95))',
-  borderTop: '1px solid rgba(148,163,184,0.6)',
-  boxShadow: '0 -16px 40px rgba(15,23,42,0.95)',
-  zIndex: 120,
-  backdropFilter: 'blur(10px)',
+    'linear-gradient(to top, rgba(15,23,42,0.99), rgba(15,23,42,0.97))',
+  borderTop: '1px solid rgba(148,163,184,0.4)',
+  boxShadow: '0 -8px 24px rgba(15,23,42,0.9)',
+  zIndex: 500,
+  backdropFilter: 'blur(12px)',
 })
 
 const SummaryInner = styled('div', {
@@ -195,19 +206,19 @@ const SummaryInner = styled('div', {
 const SummaryRow = styled('div', {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: 6,
-  fontSize: 12,
+  marginBottom: 8,
+  fontSize: 14,
   color: 'rgba(148,163,184,0.96)',
 
   variants: {
     total: {
       true: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: 700,
         color: '#e5e7eb',
-        marginTop: 8,
-        paddingTop: 10,
-        borderTop: '1px dashed rgba(148,163,184,0.7)',
+        marginTop: 10,
+        paddingTop: 12,
+        borderTop: '1px dashed rgba(148,163,184,0.4)',
         marginBottom: 0,
       },
     },
@@ -223,24 +234,25 @@ const ShippingHint = styled('div', {
 
 const CheckoutButton = styled('button', {
   width: '100%',
-  padding: '12px',
+  padding: '14px',
   borderRadius: 999,
   border: 'none',
   background:
-    'linear-gradient(135deg, #22c55e, #4ade80)',
-  color: '#022c22',
-  fontSize: 14,
-  fontWeight: 800,
+    'linear-gradient(135deg, #22c55e, #16a34a)',
+  color: '#ffffff',
+  fontSize: 15,
+  fontWeight: 700,
   cursor: 'pointer',
-  marginTop: 12,
+  marginTop: 14,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: 8,
-  boxShadow: '0 14px 32px rgba(22,163,74,0.75)',
+  gap: 10,
+  boxShadow: '0 8px 24px rgba(22,163,74,0.4)',
+  letterSpacing: '0.3px',
 
   '&:active': {
-    transform: 'scale(0.97)',
+    transform: 'scale(0.98)',
   },
 })
 
