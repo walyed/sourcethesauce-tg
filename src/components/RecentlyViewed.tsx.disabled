@@ -1,50 +1,190 @@
-import { useNavigate } from "react-router-dom";
-import { Clock } from "lucide-react";
-import { useRecentlyViewed } from "@/lib/store/recentlyViewed";
+import { useRouter } from 'next/router'
+import Image from 'next/image'
+import { Clock } from 'lucide-react'
+import { styled, keyframes } from 'stitches.config'
+import { useRecentlyViewed } from '@/lib/store/recentlyViewed'
 
 interface RecentlyViewedProps {
-  limit?: number;
-  isTelegram?: boolean;
+  limit?: number
+  /**
+   * If true, links point into the Telegram mini-app namespace (/tg)
+   * If false, links are plain web routes
+   */
+  isTelegram?: boolean
 }
 
-export const RecentlyViewed = ({ limit = 6, isTelegram = false }: RecentlyViewedProps) => {
-  const navigate = useNavigate();
-  const { getRecentlyViewed } = useRecentlyViewed();
-  
-  const products = getRecentlyViewed().slice(0, limit);
+const fadeIn = keyframes({
+  '0%': { opacity: 0, transform: 'translateY(4px)' },
+  '100%': { opacity: 1, transform: 'translateY(0)' },
+})
 
-  if (products.length === 0) return null;
+const Section = styled('section', {
+  marginTop: 16,
+  marginBottom: 8,
+})
 
-  const handleProductClick = (productId: string) => {
-    const basePath = isTelegram ? "/telegram" : "";
-    navigate(`${basePath}/product/${productId}`);
-  };
+const HeaderRow = styled('div', {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  marginBottom: 8,
+})
+
+const Title = styled('h2', {
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  margin: 0,
+  color: 'var(--tg-theme-hint-color, #6b7280)',
+})
+
+const CountBadge = styled('span', {
+  marginLeft: 'auto',
+  fontSize: 11,
+  padding: '3px 8px',
+  borderRadius: 999,
+  backgroundColor: 'var(--tg-theme-secondary-bg-color, #f3f4f6)',
+  color: 'var(--tg-theme-hint-color, #6b7280)',
+})
+
+const List = styled('div', {
+  display: 'flex',
+  gap: 10,
+  paddingBottom: 4,
+  overflowX: 'auto',
+  WebkitOverflowScrolling: 'touch',
+  scrollbarWidth: 'none',
+  msOverflowStyle: 'none',
+
+  '&::-webkit-scrollbar': {
+    display: 'none',
+  },
+})
+
+const Item = styled('button', {
+  border: 'none',
+  padding: 0,
+  margin: 0,
+  background: 'transparent',
+  cursor: 'pointer',
+  flexShrink: 0,
+  width: 130,
+  textAlign: 'left',
+  animation: `${fadeIn} 0.22s ease`,
+  transform: 'translateZ(0)',
+  transition: 'transform 0.1s ease, box-shadow 0.12s ease',
+
+  '&:active': {
+    transform: 'scale(0.97)',
+  },
+})
+
+const Thumb = styled('div', {
+  position: 'relative',
+  width: '100%',
+  aspectRatio: '4 / 5',
+  borderRadius: 14,
+  overflow: 'hidden',
+  backgroundColor: 'var(--tg-theme-secondary-bg-color, #e5e7eb)',
+  boxShadow: '0 6px 18px rgba(15,23,42,0.20)',
+  marginBottom: 6,
+})
+
+const TitleText = styled('h3', {
+  fontSize: 11,
+  fontWeight: 600,
+  margin: 0,
+  marginBottom: 2,
+  color: 'var(--tg-theme-text-color, #0f172a)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  lineHeight: 1.3,
+  minHeight: 28,
+})
+
+const PriceText = styled('p', {
+  fontSize: 12,
+  fontWeight: 800,
+  margin: 0,
+  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+})
+
+/**
+ * Recently viewed products rail.
+ * Relies on useRecentlyViewed() store, no DB calls.
+ * Expected product shape (from your store):
+ * { id: string; title: string; price: number; images: string[]; sku?: string }
+ */
+export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
+  limit = 6,
+  isTelegram = false,
+}) => {
+  const router = useRouter()
+  const { getRecentlyViewed } = useRecentlyViewed()
+
+  const raw = getRecentlyViewed() || []
+  const products = raw.slice(0, limit) as Array<{
+    id: string
+    title: string
+    price: number
+    images: string[]
+    sku?: string
+  }>
+
+  if (!products.length) return null
+
+  const handleProductClick = (product: {
+    id: string
+    sku?: string
+  }) => {
+    const basePath = isTelegram ? '/tg' : ''
+    const sku = product.sku || product.id // fall back to id if no sku stored
+    router.push(`${basePath}/product/${product.id}/${sku}`)
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Clock className="h-5 w-5" strokeWidth={1.5} />
-        <h2 className="text-heading-xl uppercase tracking-tight">Recently Viewed</h2>
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-        {products.map((product) => (
-          <div
-            key={product.id}
-            onClick={() => handleProductClick(product.id)}
-            className="flex-shrink-0 w-32 cursor-pointer group"
-          >
-            <div className="aspect-square rounded-lg overflow-hidden mb-2 bg-neutral-100">
-              <img
-                src={product.images[0]}
-                alt={product.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-            <h3 className="text-xs font-bold line-clamp-2 mb-1">{product.title}</h3>
-            <p className="text-sm font-black">£{product.price.toFixed(2)}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+    <Section>
+      <HeaderRow>
+        <Clock className="h-4 w-4" strokeWidth={1.5} />
+        <Title>Recently viewed</Title>
+        <CountBadge>{products.length}</CountBadge>
+      </HeaderRow>
+
+      <List>
+        {products.map((product) => {
+          const image =
+            product.images?.[0] ||
+            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=500&fit=crop'
+
+          return (
+            <Item
+              key={product.id}
+              onClick={() => handleProductClick(product)}
+              aria-label={product.title}
+            >
+              <Thumb>
+                <Image
+                  src={image}
+                  alt={product.title}
+                  fill
+                  sizes="130px"
+                  style={{ objectFit: 'cover' }}
+                />
+              </Thumb>
+              <TitleText>{product.title}</TitleText>
+              <PriceText>£{product.price.toFixed(2)}</PriceText>
+            </Item>
+          )
+        })}
+      </List>
+    </Section>
+  )
+}
+
+export default RecentlyViewed
